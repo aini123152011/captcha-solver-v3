@@ -75,11 +75,25 @@ BROWSER_HEADLESS=true  # 设为 false 可看到浏览器执行过程
 
 #### 4. 初始化数据库
 
+**macOS:**
 ```bash
-# 创建数据库
 createdb captcha_solver
+```
 
-# 运行迁移
+**Linux:**
+```bash
+sudo -u postgres createdb captcha_solver
+```
+
+**Windows:**
+```bash
+createdb -U postgres captcha_solver
+# 或使用 psql
+psql -U postgres -c "CREATE DATABASE captcha_solver"
+```
+
+**运行迁移:**
+```bash
 alembic upgrade head
 ```
 
