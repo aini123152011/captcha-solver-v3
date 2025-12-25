@@ -2,9 +2,8 @@
 
 import asyncio
 import base64
-import io
 import random
-import re
+import subprocess
 import tempfile
 from pathlib import Path
 from typing import Protocol
@@ -12,7 +11,6 @@ from typing import Protocol
 import httpx
 from loguru import logger
 from playwright.async_api import Page
-from pydub import AudioSegment
 
 from captcha_solver.config import settings
 from captcha_solver.domain.interfaces.browser import SolveResult
@@ -245,14 +243,21 @@ class RecaptchaV2Solver:
                 resp = await client.get(audio_url)
                 resp.raise_for_status()
 
-            # 转换为 wav
+            # 保存 mp3 文件
             with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as mp3_file:
                 mp3_file.write(resp.content)
                 mp3_path = mp3_file.name
 
+            # 使用 ffmpeg 转换为 wav
             wav_path = mp3_path.replace(".mp3", ".wav")
-            audio = AudioSegment.from_mp3(mp3_path)
-            audio.export(wav_path, format="wav")
+            result = subprocess.run(
+                ["ffmpeg", "-i", mp3_path, "-ar", "16000", "-ac", "1", wav_path, "-y"],
+                capture_output=True,
+                timeout=30,
+            )
+            if result.returncode != 0:
+                logger.error(f"ffmpeg conversion failed: {result.stderr.decode()}")
+                return None
 
             # 转录
             text = await self._transcriber.transcribe(wav_path)
